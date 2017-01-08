@@ -1,0 +1,7 @@
+/* TODO */
+* asteroid-defender needs a complete rewrite
+** bullet movement isn't affected by frame delta time
+** do more accurate impact checking by interpolating bullet points between frames
+** bullets move at constant y coordinate speed, making x coordinate velocity erratic
+* cba fixing
+/* TODO */
