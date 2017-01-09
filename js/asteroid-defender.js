@@ -37,8 +37,8 @@ class Game {
   static Initialize() {
     Game.ground = page.height - 100;
     Game.weapons = 4;
-    Game.difficulty = 20;
-    Game.cooldown = 200;
+    Game.difficulty = 40;
+    Game.cooldown = 600;
     Game.bulletVel = 8;
     Game.bulletArray = [];
     Game.lives = 3;
@@ -50,7 +50,7 @@ class Text {
   constructor() {
   }
   Draw() {
-    canvas.content.font = '20px sans serif';
+    canvas.content.font = '20px sans-serif';
     canvas.content.fillStyle = '#f33';
     canvas.content.textAlign = 'center';
     canvas.content.fillText('Lives: ' + Game.lives, 50, 25);
@@ -112,6 +112,7 @@ class Turret {
 class TurretHandler {
   constructor(position) {
     this.origin = position;
+    this.cooldown = MathC.RandomRange(Game.cooldown - Game.cooldown / 10, Game.cooldown + Game.cooldown / 10);
     this.direction = (eventlib.mouse.position.x - this.origin.x) / (this.origin.y - eventlib.mouse.position.y);
     this.state = {cooldown: false, lastFired: 0};
     this.bulletArray = [];
@@ -139,7 +140,7 @@ class TurretHandler {
     }
   }
   GetCooldownState() {
-    return time.frame.physics.start - this.state.lastFired < Game.cooldown;
+    return time.frame.physics.start - this.state.lastFired < this.cooldown;
   }
 }
 
@@ -226,7 +227,7 @@ class Asteroid {
     };
     this.velocity = {
       x: MathC.RandomRange(-3, 3),
-      y: MathC.RandomRange(3, 10),
+      y: MathC.RandomRange(3, 15),
     };
     this.color = 'rgb(' + MathC.RandomRange(150, 255) + ',' + MathC.RandomRange(25, 125) + ',' + MathC.RandomRange(25,50) + ')';
 
@@ -316,7 +317,7 @@ class Star {
 }
 class DeathScreen {
   constructor() {
-    this.transparency = 30;
+    this.transparency = 50;
     this.peaked = true;
     this.bottomed = false;
   }
@@ -327,7 +328,7 @@ class DeathScreen {
     if(this.bottomed) {
       this.transparency++;
     }
-    if(this.transparency == 30) {
+    if(this.transparency == 50) {
       this.peaked = true;
       this.bottomed = false;
     }
@@ -339,7 +340,7 @@ class DeathScreen {
   Draw() {
     canvas.content.fillStyle = '#000';
     canvas.content.fillRect(0, 0, page.width, page.height);
-    canvas.content.font = '100px sans serif';
+    canvas.content.font = '100px sans-serif';
     canvas.content.fillStyle = 'rgba(255, 40, 40,' + this.transparency / 100 + ')';
     canvas.content.textAlign = 'center';
     canvas.content.fillText('Dead', page.width / 2, page.height / 2);
