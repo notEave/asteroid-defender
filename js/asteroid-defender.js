@@ -36,12 +36,12 @@ class Game {
   }
   static Initialize() {
     Game.ground = page.height - 100;
-    Game.weapons = 4;
+    Game.weapons = Math.ceil(page.width / 500);
     Game.difficulty = 40;
     Game.cooldown = 600;
-    Game.bulletVel = 8;
+    Game.bulletVel = 40;
     Game.bulletArray = [];
-    Game.lives = 3;
+    Game.lives = Number.MAX_SAFE_INTEGER;
     Game.score = 0;
   }
 }
@@ -148,11 +148,11 @@ class Bullet {
   constructor(originx, originy, direction) {
     this.position = {x: originx, y: originy};
     this.direction = direction;
-    this.color = 'rgb(' + MathC.RandomRange(50,100) + ',' + MathC.RandomRange(100,200) + ',' + MathC.RandomRange(200,255) + ')';
+    this.color = 'rgb(' + MathC.RandomRange(50,100) + ',' + MathC.RandomRange(100,255) + ',' + MathC.RandomRange(200,255) + ')';
   }
   Physics() {
-    this.position.y += -(Game.bulletVel);
-    this.position.x += Game.bulletVel * this.direction;
+    this.position.y += -(Game.bulletVel) * (time.frame.delta / 100);
+    this.position.x += (Game.bulletVel * this.direction) * (time.frame.delta / 100);
   }
   Draw() {
     canvas.content.fillStyle = this.color;
@@ -171,6 +171,11 @@ class Laser {
     this.origin = position;
     this.mouse = eventlib.mouse.position;
     this.ratio = (this.mouse.x - this.origin.x) / (this.origin.y - this.mouse.y);
+    if(!!MathC.RandomRange(0,1)) {
+      this.color = 'rgba(255, 0, 100, 0.2)';
+    } else {
+      this.color = 'rgba(0, 255, 100, 0.2)';
+    }
   }
   Physics() {
     this.mouse = eventlib.mouse.position;
@@ -178,7 +183,7 @@ class Laser {
   }
   Draw() {
     canvas.content.lineWidth = 2;
-    canvas.content.strokeStyle = 'rgba(255, 0, 0, 0.1)';
+    canvas.content.strokeStyle = this.color;
     canvas.content.beginPath();
     canvas.content.moveTo(this.origin.x, this.origin.y);
     canvas.content.lineTo(this.origin.x + (this.origin.y * this.ratio), 0);
@@ -196,11 +201,10 @@ class AsteroidSpawner {
       this.asteroids.push(new Asteroid());
     }
     for(let n = 0; n < this.asteroids.length; n++) {
-      this.asteroids[n].Gravity();
+      this.asteroids[n].Physics();
       if(this.asteroids[n].HitGround()) {
         Game.lives--;
       }
-
       var impacted = this.asteroids[n].CheckForImpacts();
       if(impacted) { Game.score++; }
       if(this.asteroids[n].OutOfBounds() || impacted) {
@@ -213,7 +217,6 @@ class AsteroidSpawner {
       this.asteroids[n].Draw();
     }
   }
-
   static Chance(chance) {
     return chance == MathC.RandomRange(1, chance);
   }
@@ -229,24 +232,44 @@ class Asteroid {
       x: MathC.RandomRange(-3, 3),
       y: MathC.RandomRange(3, 15),
     };
-    this.color = 'rgb(' + MathC.RandomRange(150, 255) + ',' + MathC.RandomRange(25, 125) + ',' + MathC.RandomRange(25,50) + ')';
-
+    this.rgb = {r: MathC.RandomRange(150, 255), g: MathC.RandomRange(25, 125), b: MathC.RandomRange(25, 50) };
+    this.color = 'rgb(' + this.rgb.r + ',' + this.rgb.g + ',' + this.rgb.b + ')';
+    this.asteroidTrail = [];
+  }
+  Physics() {
+    this.position.x += this.velocity.x * (time.frame.delta / 100);
+    this.position.y += this.velocity.y * (time.frame.delta / 100);
+    this.asteroidTrail.unshift(new AsteroidTrail(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b]));
+    if(this.asteroidTrail.length > 100) {
+      // remove all positions after 100 that exist
+      this.asteroidTrail.splice(101, 1);
+    }
+    for(var n = 0; n < this.asteroidTrail.length; n++) {
+      this.asteroidTrail[n].Physics();
+    }
   }
   Draw() {
+    for(var n = 0; n < this.asteroidTrail.length; n++) {
+      this.asteroidTrail[n].Draw();
+    }
+    var halo = canvas.content.createRadialGradient(this.position.x, this.position.y, 5, this.position.x, this.position.y, 10);
+    halo.addColorStop(0, this.color);
+    halo.addColorStop(1, 'transparent');
+    canvas.content.fillStyle = halo;
+    canvas.content.beginPath();
+    canvas.content.arc(this.position.x, this.position.y, 10, 0, MathC.TAU);
+    canvas.content.closePath();
+    canvas.content.fill();
+
     canvas.content.fillStyle = this.color;
     canvas.content.beginPath();
     canvas.content.arc(this.position.x, this.position.y, 5, 0, MathC.TAU);
     canvas.content.closePath();
     canvas.content.fill();
   }
-  Gravity() {
-    this.position.x += this.velocity.x * (time.frame.delta / 100);
-    this.position.y += this.velocity.y * (time.frame.delta / 100);
-  }
   OutOfBounds() {
     return this.position.x > page.width || this.position.x < 0 || this.position.y > Game.ground;
   }
-
   HitGround() {
     return this.position.y > Game.ground;
   }
@@ -258,6 +281,30 @@ class Asteroid {
         }
       }
     }
+  }
+}
+
+class AsteroidTrail {
+  constructor(positionx, positiony, astColor) {
+    this.position = {x: positionx, y: positiony};
+    this.rgb = {r: astColor[0], g: astColor[1], b: astColor[2]};
+    this.transparency = 100;
+  }
+
+  Physics() {
+    this.transparency--;
+    this.color = 'rgba(' + this.rgb.r + ',' + this.rgb.g + ',' + this.rgb.b + ',' + (this.transparency / 100) / 10 + ')';
+
+  }
+  Draw() {
+    var halo = canvas.content.createRadialGradient(this.position.x, this.position.y, 5, this.position.x, this.position.y, 25);
+    halo.addColorStop(0, this.color);
+    halo.addColorStop(1, 'transparent');
+    canvas.content.fillStyle = halo;
+    canvas.content.beginPath();
+    canvas.content.arc(this.position.x, this.position.y, 30, 0, MathC.TAU);
+    canvas.content.closePath();
+    canvas.content.fill();
   }
 }
 
@@ -289,7 +336,6 @@ class StarSys {
   constructor() {
     this.stars = StarSys.CreateStars();
   }
-
   static CreateStars() {
     let starArray = new Array(MathC.Round(page.width * page.height / 10000));
     for(let n = 0; n < starArray.length; n++) {
@@ -315,6 +361,7 @@ class Star {
     canvas.content.fillRect(this.x, this.y, 1, 1);
   }
 }
+
 class DeathScreen {
   constructor() {
     this.transparency = 50;
@@ -345,8 +392,5 @@ class DeathScreen {
     canvas.content.textAlign = 'center';
     canvas.content.fillText('Dead', page.width / 2, page.height / 2);
     canvas.content.fillText('Score: ' + (Game.finalScore * 10).toLocaleString(), page.width / 2, page.height * 0.8);
-  }
-  End() {
-
   }
 }
