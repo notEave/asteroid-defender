@@ -41,7 +41,7 @@ class Game {
     Game.cooldown = 600;
     Game.bulletVel = 40;
     Game.bulletArray = [];
-    Game.lives = 3;
+    Game.lives = Number.MAX_SAFE_INTEGER;
     Game.score = 0;
   }
 }
@@ -232,16 +232,17 @@ class Asteroid {
       x: MathC.RandomRange(-3, 3),
       y: MathC.RandomRange(3, 15),
     };
-    this.rgb = {r: MathC.RandomRange(150, 255), g: MathC.RandomRange(25, 125, b: MathC.RandomRange(25, 50) };
+    this.rgb = {r: MathC.RandomRange(150, 255), g: MathC.RandomRange(25, 125), b: MathC.RandomRange(25, 50) };
     this.color = 'rgb(' + this.rgb.r + ',' + this.rgb.g + ',' + this.rgb.b + ')';
     this.asteroidTrail = [];
+  }
   Physics() {
     this.position.x += this.velocity.x * (time.frame.delta / 100);
     this.position.y += this.velocity.y * (time.frame.delta / 100);
-    this.asteroidTrail.push(new AsteroidTrail(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.grb.b]));
+    this.asteroidTrail.push(new AsteroidTrail(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b]));
     if(this.asteroidTrail.length > 100) {
       // remove all positions after 100 that exist
-      this.asteroidTrail.splice(101, this.asteroidTrail.length - 100);
+      this.asteroidTrail.splice(101, 1);
     }
     for(var n = 0; n < this.asteroidTrail.length; n++) {
       this.asteroidTrail[n].Physics();
@@ -265,7 +266,6 @@ class Asteroid {
     canvas.content.arc(this.position.x, this.position.y, 5, 0, MathC.TAU);
     canvas.content.closePath();
     canvas.content.fill();
-  }
   }
   OutOfBounds() {
     return this.position.x > page.width || this.position.x < 0 || this.position.y > Game.ground;
@@ -299,7 +299,9 @@ class AsteroidTrail {
   Draw() {
     canvas.content.fillStyle = this.color;
     canvas.content.beginPath();
-    canvas.content.arc(this.position.x, this.position.y, )
+    canvas.content.arc(this.position.x, this.position.y, 30, 0, MathC.TAU);
+    canvas.content.closePath();
+    canvas.content.fill();
   }
 }
 
