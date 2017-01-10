@@ -19,6 +19,14 @@ const page = {
 };
 const MathC = {
   TAU: Math.PI * 2,
+  angle: {
+    Radians: function($degrees) {
+      return $degrees * Math.PI / 180;
+    },
+    Degrees: function($radians) {
+      return $radians * 180 / Math.PI;
+    },
+  },
   Random: function($seed = Math.random()) {
     // random number generation with seed
     return Math.sin($seed) * 10000 - Math.floor(Math.sin($seed) * 10000);
