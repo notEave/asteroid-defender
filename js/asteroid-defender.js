@@ -37,8 +37,8 @@ class Game {
   static Initialize() {
     Game.ground = page.height - 100;
     Game.weapons = Math.ceil(page.width / 500);
-    Game.difficulty = 40;
-    Game.cooldown = 600;
+    Game.difficulty = 70;
+    Game.cooldown = 500;
     Game.bulletVel = 400;
     Game.bulletArray = [];
     Game.lives = 3;// Number.MAX_SAFE_INTEGER;
@@ -53,7 +53,7 @@ class Text {
     canvas.content.font = '20px sans-serif';
     canvas.content.fillStyle = '#f33';
     canvas.content.textAlign = 'center';
-    canvas.content.fillText('Lives: ' + Game.lives, 50, 25);
+    canvas.content.fillText(`Lives: ${Game.lives}`, 50, 25);
   }
 }
 
@@ -114,13 +114,11 @@ class TurretHandler {
     this.origin = position;
     this.cooldown = MathC.RandomRange(Game.cooldown - Game.cooldown / 10, Game.cooldown + Game.cooldown / 10);
     this.angle = Math.atan2(eventlib.mouse.position.y - this.origin.y, eventlib.mouse.position.x - this.origin.x);
-    this.direction = (eventlib.mouse.position.x - this.origin.x) / (this.origin.y - eventlib.mouse.position.y);
     this.state = {cooldown: false, lastFired: 0};
     this.bulletArray = [];
   }
   Physics() {
     this.angle = Math.atan2(eventlib.mouse.position.y - this.origin.y, eventlib.mouse.position.x - this.origin.x);
-    this.direction = (eventlib.mouse.position.x - this.origin.x) / (this.origin.y - eventlib.mouse.position.y);
     for(var n = 0; n < this.bulletArray.length; n++) {
       this.bulletArray[n].Physics();
 
@@ -150,16 +148,19 @@ class Bullet {
   constructor(originx, originy, angle) {
     this.position = {x: originx, y: originy};
     this.velocity = {x: Game.bulletVel * Math.cos(angle), y: (Game.bulletVel * Math.sin(angle))};
-    this.color = 'rgb(' + MathC.RandomRange(50,100) + ',' + MathC.RandomRange(100,255) + ',' + MathC.RandomRange(200,255) + ')';
+    this.color = `rgb(${MathC.RandomRange(50,100)},${MathC.RandomRange(150,230)},${MathC.RandomRange(200,255)})`;
   }
   Physics() {
     this.position.y += this.velocity.y * (time.frame.delta / 1000);
     this.position.x += this.velocity.x * (time.frame.delta / 1000);
   }
   Draw() {
-    canvas.content.fillStyle = this.color;
+    var halo = canvas.content.createRadialGradient(this.position.x, this.position.y, 2, this.position.x, this.position.y, 5);
+    halo.addColorStop(0, this.color);
+    halo.addColorStop(1, 'transparent');
+    canvas.content.fillStyle = halo;
     canvas.content.beginPath();
-    canvas.content.arc(this.position.x, this.position.y, 2, 0, MathC.TAU);
+    canvas.content.arc(this.position.x, this.position.y, 5, 0, MathC.TAU);
     canvas.content.closePath();
     canvas.content.fill();
   }
@@ -235,16 +236,18 @@ class Asteroid {
       y: MathC.RandomRange(3, 15),
     };
     this.rgb = {r: MathC.RandomRange(150, 255), g: MathC.RandomRange(25, 125), b: MathC.RandomRange(25, 50) };
-    this.color = 'rgb(' + this.rgb.r + ',' + this.rgb.g + ',' + this.rgb.b + ')';
+    this.color = `rgb(${this.rgb.r},${this.rgb.g},${this.rgb.b})`;
     this.asteroidTrail = [];
   }
   Physics() {
     this.position.x += this.velocity.x * (time.frame.delta / 100);
     this.position.y += this.velocity.y * (time.frame.delta / 100);
-    this.asteroidTrail.unshift(new AsteroidTrail(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b]));
-    if(this.asteroidTrail.length > Game.difficulty * 2) {
+    if(time.frame.current % 10 === 0) {
+      this.asteroidTrail.unshift(new AsteroidTrail(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b]));
+    }
+    if(this.asteroidTrail.length > 10) {
       // remove all positions after 100 that exist
-      this.asteroidTrail.splice((Game.difficulty * 2) + 1, 1);
+      this.asteroidTrail.splice(10, 1);
     }
     for(var n = 0; n < this.asteroidTrail.length; n++) {
       this.asteroidTrail[n].Physics();
@@ -278,7 +281,7 @@ class Asteroid {
   CheckForImpacts() {
     for(var n = 0; n < Game.bulletArray.length; n++) {
       for(var i = 0; i < Game.bulletArray[n].length; i++) {
-        if (Math.pow(this.position.x-Game.bulletArray[n][i].position.x, 2) + Math.pow(Game.bulletArray[n][i].position.y-this.position.y, 2) <= Math.pow(10+10, 2)) {
+        if (Math.pow(this.position.x-Game.bulletArray[n][i].position.x, 2) + Math.pow(Game.bulletArray[n][i].position.y-this.position.y, 2) <= Math.pow(10+5, 2)) {
           return true; // else continue checking through array
         }
       }
@@ -289,14 +292,12 @@ class Asteroid {
 class AsteroidTrail {
   constructor(positionx, positiony, astColor) {
     this.position = {x: positionx, y: positiony};
-    this.rgb = {r: astColor[0], g: astColor[1], b: astColor[2]};
-    this.transparency = 100;
+    this.rgba = {r: astColor[0], g: astColor[1], b: astColor[2], a: 100};
   }
 
   Physics() {
-    this.transparency--;
-    this.color = 'rgba(' + this.rgb.r + ',' + this.rgb.g + ',' + this.rgb.b + ',' + (this.transparency / 100) / 10 + ')';
-
+    this.rgba.a--;
+    this.color = `rgba(${this.rgba.r},${this.rgba.g},${this.rgba.b},${this.rgba.a / 100 / 5})`;
   }
   Draw() {
     var halo = canvas.content.createRadialGradient(this.position.x, this.position.y, 5, this.position.x, this.position.y, 25);
@@ -325,7 +326,7 @@ class Scene {
 
 class Square {
   constructor(color, start) {
-    this.color = '#' + color;
+    this.color = `#${color}`;
     this.start = start;
   }
   Draw() {
@@ -393,6 +394,6 @@ class DeathScreen {
     canvas.content.fillStyle = 'rgba(255, 40, 40,' + this.transparency / 100 + ')';
     canvas.content.textAlign = 'center';
     canvas.content.fillText('Dead', page.width / 2, page.height / 2);
-    canvas.content.fillText('Score: ' + (Game.finalScore * 10).toLocaleString(), page.width / 2, page.height * 0.8);
+    canvas.content.fillText(`Score: ${(Game.finalScore * 10).toLocaleString()}`, page.width / 2, page.height * 0.8);
   }
 }
