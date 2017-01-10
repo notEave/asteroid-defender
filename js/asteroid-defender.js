@@ -15,6 +15,7 @@ class Game {
       Game.finalScore = Game.score;
     }
     this.DifficultyHandler();
+    this.scene.Physics();
     this.player.Physics();
     this.spawner.Physics();
     this.deathScreen.Refresh();
@@ -317,6 +318,9 @@ class Scene {
     this.land = new Square('120', page.height - 100, page.height);
     this.stars = new StarSys();
   }
+  Physics() {
+    this.stars.Physics();
+  }
   Draw() {
     this.background.Draw();
     this.land.Draw();
@@ -346,6 +350,11 @@ class StarSys {
     }
     return starArray;
   }
+  Physics() {
+    for(var n = 0; n < this.stars.length; n++) {
+      this.stars[n].Physics();
+    }
+  }
   Draw() {
     for(let n = 0; n < this.stars.length; n++) {
       this.stars[n].Draw();
@@ -357,10 +366,18 @@ class Star {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.color = '#fff';
+    this.rgba = {r: 255, g: 255, b: 255, a: 1};
+
+  }
+  Physics() {
+    if(!!MathC.RandomRange(0, 100)) {
+      this.rgba.a = 1;
+    } else {
+      this.rgba.a = 0;
+    }
   }
   Draw() {
-    canvas.content.fillStyle = this.color;
+    canvas.content.fillStyle = `rgba(${this.rgba.r},${this.rgba.g},${this.rgba.b},${this.rgba.a})`;
     canvas.content.fillRect(this.x, this.y, 1, 1);
   }
 }
