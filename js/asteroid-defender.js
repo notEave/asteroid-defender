@@ -39,9 +39,9 @@ class Game {
     Game.weapons = Math.ceil(page.width / 500);
     Game.difficulty = 40;
     Game.cooldown = 600;
-    Game.bulletVel = 40;
+    Game.bulletVel = 400;
     Game.bulletArray = [];
-    Game.lives = Number.MAX_SAFE_INTEGER;
+    Game.lives = 3;// Number.MAX_SAFE_INTEGER;
     Game.score = 0;
   }
 }
@@ -113,11 +113,13 @@ class TurretHandler {
   constructor(position) {
     this.origin = position;
     this.cooldown = MathC.RandomRange(Game.cooldown - Game.cooldown / 10, Game.cooldown + Game.cooldown / 10);
+    this.angle = Math.atan2(eventlib.mouse.position.y - this.origin.y, eventlib.mouse.position.x - this.origin.x);
     this.direction = (eventlib.mouse.position.x - this.origin.x) / (this.origin.y - eventlib.mouse.position.y);
     this.state = {cooldown: false, lastFired: 0};
     this.bulletArray = [];
   }
   Physics() {
+    this.angle = Math.atan2(eventlib.mouse.position.y - this.origin.y, eventlib.mouse.position.x - this.origin.x);
     this.direction = (eventlib.mouse.position.x - this.origin.x) / (this.origin.y - eventlib.mouse.position.y);
     for(var n = 0; n < this.bulletArray.length; n++) {
       this.bulletArray[n].Physics();
@@ -131,7 +133,7 @@ class TurretHandler {
     this.state.cooldown = this.GetCooldownState();
     if(!this.state.cooldown && eventlib.mouse.down) {
       this.state.lastFired = time.frame.physics.start;
-      this.bulletArray.push(new Bullet(this.origin.x, this.origin.y, this.direction));
+      this.bulletArray.push(new Bullet(this.origin.x, this.origin.y, this.angle));
     }
   }
   Draw() {
@@ -145,14 +147,14 @@ class TurretHandler {
 }
 
 class Bullet {
-  constructor(originx, originy, direction) {
+  constructor(originx, originy, angle) {
     this.position = {x: originx, y: originy};
-    this.direction = direction;
+    this.velocity = {x: Game.bulletVel * Math.cos(angle), y: (Game.bulletVel * Math.sin(angle))};
     this.color = 'rgb(' + MathC.RandomRange(50,100) + ',' + MathC.RandomRange(100,255) + ',' + MathC.RandomRange(200,255) + ')';
   }
   Physics() {
-    this.position.y += -(Game.bulletVel) * (time.frame.delta / 100);
-    this.position.x += (Game.bulletVel * this.direction) * (time.frame.delta / 100);
+    this.position.y += this.velocity.y * (time.frame.delta / 1000);
+    this.position.x += this.velocity.x * (time.frame.delta / 1000);
   }
   Draw() {
     canvas.content.fillStyle = this.color;
@@ -162,7 +164,7 @@ class Bullet {
     canvas.content.fill();
   }
   OutofBounds() {
-    return this.position.x > page.width || this.position.x < 0 || this.position.y < 0;
+    return this.position.x > page.width || this.position.x < 0 || this.position.y < 0 || this.position.y > Game.ground;
   }
 }
 
@@ -240,9 +242,9 @@ class Asteroid {
     this.position.x += this.velocity.x * (time.frame.delta / 100);
     this.position.y += this.velocity.y * (time.frame.delta / 100);
     this.asteroidTrail.unshift(new AsteroidTrail(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b]));
-    if(this.asteroidTrail.length > 100) {
+    if(this.asteroidTrail.length > Game.difficulty * 2) {
       // remove all positions after 100 that exist
-      this.asteroidTrail.splice(101, 1);
+      this.asteroidTrail.splice((Game.difficulty * 2) + 1, 1);
     }
     for(var n = 0; n < this.asteroidTrail.length; n++) {
       this.asteroidTrail[n].Physics();
