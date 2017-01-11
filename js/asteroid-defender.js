@@ -273,7 +273,7 @@ class AsteroidTrail {
 class Scene {
   constructor() {
     this.background = new Square('000', 0, page.height);
-    this.land = new Square('120', page.height - 100, page.height);
+    this.land = new Square('101510', page.height - 100, page.height);
     this.stars = new StarSys();
   }
   Physics() {
