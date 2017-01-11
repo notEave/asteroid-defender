@@ -1,54 +1,55 @@
-// jshint esversion:6
+// jshint esversion:6, -W138
+
 
 class Game {
   constructor() {
     Game.Initialize();
-    this.lastChange = time.frame.physics.start;
-    this.spawner = new AsteroidSpawner();
-    this.scene = new Scene();
-    this.player = new PlayerHandler();
-    this.deathScreen = new DeathScreen();
-    this.lives = new Text();
+    this.queue = [
+      new Scene(),
+      new PlayerHandler(),
+      new AsteroidSpawner(),
+      new TextElement(),
+      new DeathScreen(),
+    ];
   }
   Physics() {
     if(Game.finalScore === undefined && Game.lives <= 0) {
       Game.finalScore = Game.score;
     }
     this.DifficultyHandler();
-    this.scene.Physics();
-    this.player.Physics();
-    this.spawner.Physics();
-    this.deathScreen.Refresh();
+    for(var n=0; n < this.queue.length; n++) {
+      this.queue[n].Physics();
+    }
   }
   Draw() {
-    this.scene.Draw();
-    this.spawner.Draw();
-    this.player.Draw();
-    this.lives.Draw();
-    if(Game.lives <= 0) {
-      this.deathScreen.Draw();
+    for(var n=0; n < this.queue.length; n++) {
+      this.queue[n].Draw();
     }
   }
   DifficultyHandler() {
-    if(time.frame.physics.start - this.lastChange > 7000 && Game.difficulty > 1) {
-      this.lastChange = time.frame.physics.start;
+    if(time.frame.physics.start - Game.lastChange > 7000 && Game.difficulty > 1) {
+      Game.lastChange = time.frame.physics.start;
       Game.difficulty--;
     }
   }
   static Initialize() {
+    Game.lastChange = time.frame.physics.start;
     Game.ground = page.height - 100;
     Game.weapons = Math.ceil(page.width / 500);
     Game.difficulty = 70;
-    Game.cooldown = 10;
+    Game.cooldown = 500;
     Game.bulletVel = 400;
     Game.bulletArray = [];
-    Game.lives = Number.MAX_SAFE_INTEGER;// Number.MAX_SAFE_INTEGER;
+    Game.lives = 3;// Number.MAX_SAFE_INTEGER;
     Game.score = 0;
   }
 }
 
-class Text {
+class TextElement {
   constructor() {
+  }
+  Physics() {
+
   }
   Draw() {
     canvas.content.font = '20px sans-serif';
@@ -163,25 +164,16 @@ class Bullet {
 class Laser {
   constructor(position) {
     this.origin = position;
-    this.mouse = eventlib.mouse.position;
-    this.angle = Math.atan2(eventlib.mouse.position.y - this.origin.y, eventlib.mouse.position.x - this.origin.x);
-    this.end = {x: 500 * Math.cos(this.angle), y: 500 * Math.sin(this.angle)};
-    console.log(this.end.x, this.end.y);
-    this.ratio = (this.mouse.x - this.origin.x) / (this.origin.y - this.mouse.y);
-    if(!!MathC.RandomRange(0,1)) {
-      this.color = [255, 0, 100, 20];
-    } else {
-      this.color = [0, 255, 100, 20];
-    }
+    this.color = !!MathC.RandomRange(0,1) ? [255, 0, 100, 20] : [0, 255, 100, 20];
   }
   Physics() {
-    this.mouse = eventlib.mouse.position;
     this.angle = Math.atan2(eventlib.mouse.position.y - this.origin.y, eventlib.mouse.position.x - this.origin.x);
-    this.end = {x: 500 * Math.cos(this.angle), y: 500 * Math.sin(this.angle)};
-    this.ratio = (this.mouse.x - this.origin.x) / (this.origin.y - this.mouse.y);
+    this.end = {x: this.origin.x + page.height * Math.cos(this.angle), y: this.origin.y + page.height * Math.sin(this.angle)};
   }
   Draw() {
-    new GradientLine([this.origin.x, this.origin.y], [this.end.x, this.end.y], this.color, 2).Draw();
+    var line = new GradientLine([this.origin.x, this.origin.y], [this.end.x, this.end.y], this.color, 2);
+    line.colorStop[0] = 0.7;
+    line.Draw();
   }
 }
 
@@ -219,18 +211,18 @@ class Asteroid {
   constructor() {
     this.position = {
       x: MathC.RandomRange(0, page.width),
-      y: -5,
+      y: 0,
     };
     this.velocity = {
-      x: MathC.RandomRange(-3, 3),
-      y: MathC.RandomRange(3, 15),
+      x: MathC.RandomRange(-30, 30),
+      y: MathC.RandomRange(30, 150),
     };
     this.rgb = {r: MathC.RandomRange(150, 255), g: MathC.RandomRange(25, 125), b: MathC.RandomRange(25, 50) };
     this.asteroidTrail = [];
   }
   Physics() {
-    this.position.x += this.velocity.x * (time.frame.delta / 100);
-    this.position.y += this.velocity.y * (time.frame.delta / 100);
+    this.position.x += this.velocity.x * (time.frame.delta / 1000);
+    this.position.y += this.velocity.y * (time.frame.delta / 1000);
     if(time.frame.current % 10 === 0) {
       this.asteroidTrail.unshift(new AsteroidTrail(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b]));
     }
@@ -354,7 +346,7 @@ class DeathScreen {
     this.peaked = true;
     this.bottomed = false;
   }
-  Refresh() {
+  Physics() {
     if(this.peaked) {
       this.transparency--;
     }
@@ -371,13 +363,15 @@ class DeathScreen {
     }
   }
   Draw() {
-    canvas.content.fillStyle = '#000';
-    canvas.content.fillRect(0, 0, page.width, page.height);
-    canvas.content.font = '100px sans-serif';
-    canvas.content.fillStyle = 'rgba(255, 40, 40,' + this.transparency / 100 + ')';
-    canvas.content.textAlign = 'center';
-    canvas.content.fillText('Dead', page.width / 2, page.height / 2);
-    canvas.content.fillText(`Score: ${(Game.finalScore * 10).toLocaleString()}`, page.width / 2, page.height * 0.8);
+    if(Game.lives <= 0) {
+      canvas.content.fillStyle = '#000';
+      canvas.content.fillRect(0, 0, page.width, page.height);
+      canvas.content.font = '100px sans-serif';
+      canvas.content.fillStyle = 'rgba(255, 40, 40,' + this.transparency / 100 + ')';
+      canvas.content.textAlign = 'center';
+      canvas.content.fillText('Dead', page.width / 2, page.height / 2);
+      canvas.content.fillText(`Score: ${(Game.finalScore * 10).toLocaleString()}`, page.width / 2, page.height * 0.8);
+    }
   }
 }
 class Circle {
@@ -435,11 +429,12 @@ class Line {
 class GradientLine extends Line {
   constructor(start, end, color, lineWidth = 1) {
     super(start, end, color, lineWidth);
+    this.colorStop = [0, 1];
   }
   Draw() {
     var gradient = canvas.content.createLinearGradient(this.start.x, this.start.y, this.end.x, this.end.y);
-    gradient.addColorStop(0, `rgba(${this.rgba.r},${this.rgba.g},${this.rgba.b},${this.rgba.a})`);
-    gradient.addColorStop(1, 'transparent');
+    gradient.addColorStop(this.colorStop[0], `rgba(${this.rgba.r},${this.rgba.g},${this.rgba.b},${this.rgba.a})`);
+    gradient.addColorStop(this.colorStop[1], 'transparent');
     canvas.content.lineWidth = this.lineWidth;
     canvas.content.strokeStyle = gradient;
     canvas.content.beginPath();
