@@ -39,10 +39,10 @@ class Game {
     Game.ground = page.height - 100;
     Game.weapons = Math.ceil(page.width / 500);
     Game.difficulty = 70;
-    Game.cooldown = 500;
+    Game.cooldown = 10;
     Game.bulletVel = 400;
     Game.bulletArray = [];
-    Game.lives = 3;// Number.MAX_SAFE_INTEGER;
+    Game.lives = Number.MAX_SAFE_INTEGER;// Number.MAX_SAFE_INTEGER;
     Game.score = 0;
   }
 }
@@ -102,11 +102,7 @@ class Turret {
   Draw() {
     this.laser.Draw();
     this.turretHandler.Draw();
-    canvas.content.fillStyle = '#234';
-    canvas.content.beginPath();
-    canvas.content.arc(this.position.x, this.position.y, 10, 0, Math.PI, true);
-    canvas.content.closePath();
-    canvas.content.fill();
+    new Circle(this.position.x, this.position.y, [34, 51, 68, 100], 10, MathC.TAU, Math.PI).Draw();
   }
 }
 
@@ -149,21 +145,15 @@ class Bullet {
   constructor(originx, originy, angle) {
     this.position = {x: originx, y: originy};
     this.velocity = {x: Game.bulletVel * Math.cos(angle), y: (Game.bulletVel * Math.sin(angle))};
-    this.color = `rgb(${MathC.RandomRange(50,100)},${MathC.RandomRange(150,230)},${MathC.RandomRange(200,255)})`;
+    this.rgb = {r: MathC.RandomRange(50,100), g: MathC.RandomRange(150, 230), b: MathC.RandomRange(200, 255)};
   }
   Physics() {
     this.position.y += this.velocity.y * (time.frame.delta / 1000);
     this.position.x += this.velocity.x * (time.frame.delta / 1000);
   }
   Draw() {
-    var halo = canvas.content.createRadialGradient(this.position.x, this.position.y, 2, this.position.x, this.position.y, 5);
-    halo.addColorStop(0, this.color);
-    halo.addColorStop(1, 'transparent');
-    canvas.content.fillStyle = halo;
-    canvas.content.beginPath();
-    canvas.content.arc(this.position.x, this.position.y, 5, 0, MathC.TAU);
-    canvas.content.closePath();
-    canvas.content.fill();
+    new GradientCircle(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.g, 10] , 15, 5).Draw();
+    new GradientCircle(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b, 100], 5, 2).Draw();
   }
   OutofBounds() {
     return this.position.x > page.width || this.position.x < 0 || this.position.y < 0 || this.position.y > Game.ground;
@@ -174,25 +164,24 @@ class Laser {
   constructor(position) {
     this.origin = position;
     this.mouse = eventlib.mouse.position;
+    this.angle = Math.atan2(eventlib.mouse.position.y - this.origin.y, eventlib.mouse.position.x - this.origin.x);
+    this.end = {x: 500 * Math.cos(this.angle), y: 500 * Math.sin(this.angle)};
+    console.log(this.end.x, this.end.y);
     this.ratio = (this.mouse.x - this.origin.x) / (this.origin.y - this.mouse.y);
     if(!!MathC.RandomRange(0,1)) {
-      this.color = 'rgba(255, 0, 100, 0.2)';
+      this.color = [255, 0, 100, 20];
     } else {
-      this.color = 'rgba(0, 255, 100, 0.2)';
+      this.color = [0, 255, 100, 20];
     }
   }
   Physics() {
     this.mouse = eventlib.mouse.position;
+    this.angle = Math.atan2(eventlib.mouse.position.y - this.origin.y, eventlib.mouse.position.x - this.origin.x);
+    this.end = {x: 500 * Math.cos(this.angle), y: 500 * Math.sin(this.angle)};
     this.ratio = (this.mouse.x - this.origin.x) / (this.origin.y - this.mouse.y);
   }
   Draw() {
-    canvas.content.lineWidth = 2;
-    canvas.content.strokeStyle = this.color;
-    canvas.content.beginPath();
-    canvas.content.moveTo(this.origin.x, this.origin.y);
-    canvas.content.lineTo(this.origin.x + (this.origin.y * this.ratio), 0);
-    canvas.content.closePath();
-    canvas.content.stroke();
+    new GradientLine([this.origin.x, this.origin.y], [this.end.x, this.end.y], this.color, 2).Draw();
   }
 }
 
@@ -237,7 +226,6 @@ class Asteroid {
       y: MathC.RandomRange(3, 15),
     };
     this.rgb = {r: MathC.RandomRange(150, 255), g: MathC.RandomRange(25, 125), b: MathC.RandomRange(25, 50) };
-    this.color = `rgb(${this.rgb.r},${this.rgb.g},${this.rgb.b})`;
     this.asteroidTrail = [];
   }
   Physics() {
@@ -247,7 +235,6 @@ class Asteroid {
       this.asteroidTrail.unshift(new AsteroidTrail(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b]));
     }
     if(this.asteroidTrail.length > 10) {
-      // remove all positions after 100 that exist
       this.asteroidTrail.splice(10, 1);
     }
     for(var n = 0; n < this.asteroidTrail.length; n++) {
@@ -258,20 +245,7 @@ class Asteroid {
     for(var n = 0; n < this.asteroidTrail.length; n++) {
       this.asteroidTrail[n].Draw();
     }
-    var halo = canvas.content.createRadialGradient(this.position.x, this.position.y, 5, this.position.x, this.position.y, 10);
-    halo.addColorStop(0, this.color);
-    halo.addColorStop(1, 'transparent');
-    canvas.content.fillStyle = halo;
-    canvas.content.beginPath();
-    canvas.content.arc(this.position.x, this.position.y, 10, 0, MathC.TAU);
-    canvas.content.closePath();
-    canvas.content.fill();
-
-    canvas.content.fillStyle = this.color;
-    canvas.content.beginPath();
-    canvas.content.arc(this.position.x, this.position.y, 5, 0, MathC.TAU);
-    canvas.content.closePath();
-    canvas.content.fill();
+    new GradientCircle(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b, 100], 10, 5).Draw();
   }
   OutOfBounds() {
     return this.position.x > page.width || this.position.x < 0 || this.position.y > Game.ground;
@@ -293,22 +267,14 @@ class Asteroid {
 class AsteroidTrail {
   constructor(positionx, positiony, astColor) {
     this.position = {x: positionx, y: positiony};
-    this.rgba = {r: astColor[0], g: astColor[1], b: astColor[2], a: 100};
+    this.rgba = {r: astColor[0], g: astColor[1], b: astColor[2], a: 100 / 4};
   }
 
   Physics() {
-    this.rgba.a--;
-    this.color = `rgba(${this.rgba.r},${this.rgba.g},${this.rgba.b},${this.rgba.a / 100 / 5})`;
+    this.rgba.a += -0.25;
   }
   Draw() {
-    var halo = canvas.content.createRadialGradient(this.position.x, this.position.y, 5, this.position.x, this.position.y, 25);
-    halo.addColorStop(0, this.color);
-    halo.addColorStop(1, 'transparent');
-    canvas.content.fillStyle = halo;
-    canvas.content.beginPath();
-    canvas.content.arc(this.position.x, this.position.y, 30, 0, MathC.TAU);
-    canvas.content.closePath();
-    canvas.content.fill();
+    new GradientCircle(this.position.x, this.position.y, [this.rgba.r, this.rgba.g, this.rgba.b, this.rgba.a], 25, 5).Draw();
   }
 }
 
@@ -412,5 +378,74 @@ class DeathScreen {
     canvas.content.textAlign = 'center';
     canvas.content.fillText('Dead', page.width / 2, page.height / 2);
     canvas.content.fillText(`Score: ${(Game.finalScore * 10).toLocaleString()}`, page.width / 2, page.height * 0.8);
+  }
+}
+class Circle {
+  constructor(positionx, positiony, color = [], radius, circumference = MathC.TAU, rotation = 0) {
+    this.position = {x: positionx, y: positiony};
+    this.rgba =  {r: color[0], g: color[1], b: color[2], a: color[3] / 100};
+    this.radius = radius;
+    this.circumference = circumference;
+    this.rotation = rotation;
+  }
+  Draw() {
+    canvas.content.fillStyle = `rgba(${this.rgba.r},${this.rgba.g},${this.rgba.b},${this.rgba.a})`;
+    canvas.content.beginPath();
+    canvas.content.arc(this.position.x, this.position.y, this.radius, this.rotation, this.circumference);
+    canvas.content.closePath();
+    canvas.content.fill();
+  }
+}
+
+class GradientCircle extends Circle {
+  constructor(positionx, positiony, color, radius, gradientStart) {
+    super(positionx, positiony, color, radius);
+    this.gradientStart = gradientStart;
+  }
+  Draw() {
+    var gradient = canvas.content.createRadialGradient(this.position.x, this.position.y, this.gradientStart, this.position.x, this.position.y, this.radius);
+    gradient.addColorStop(0, `rgba(${this.rgba.r},${this.rgba.g},${this.rgba.b},${this.rgba.a})`);
+    gradient.addColorStop(1, 'transparent');
+    canvas.content.fillStyle = gradient;
+    canvas.content.beginPath();
+    canvas.content.arc(this.position.x, this.position.y, this.radius, 0, MathC.TAU);
+    canvas.content.closePath();
+    canvas.content.fill();
+  }
+}
+
+class Line {
+  constructor(start, end, color, lineWidth = 1) {
+    this.start = {x: start[0], y: start[1]};
+    this.end = {x: end[0], y: end[1]};
+    this.rgba = {r: color[0], g: color[1], b: color[2], a: color[3] / 100};
+    this.lineWidth = lineWidth;
+  }
+  Draw() {
+    canvas.content.lineWidth = this.lineWidth;
+    canvas.content.strokeStyle = `rgba(${this.rgba.r},${this.rgba.g},${this.rgba.b},${this.rgba.a})`;
+    canvas.content.beginPath();
+    canvas.content.moveTo(this.start.x, this.start.y);
+    canvas.content.lineTo(this.end.x, this.end.y);
+    canvas.content.closePath();
+    canvas.content.stroke();
+  }
+}
+
+class GradientLine extends Line {
+  constructor(start, end, color, lineWidth = 1) {
+    super(start, end, color, lineWidth);
+  }
+  Draw() {
+    var gradient = canvas.content.createLinearGradient(this.start.x, this.start.y, this.end.x, this.end.y);
+    gradient.addColorStop(0, `rgba(${this.rgba.r},${this.rgba.g},${this.rgba.b},${this.rgba.a})`);
+    gradient.addColorStop(1, 'transparent');
+    canvas.content.lineWidth = this.lineWidth;
+    canvas.content.strokeStyle = gradient;
+    canvas.content.beginPath();
+    canvas.content.moveTo(this.start.x, this.start.y);
+    canvas.content.lineTo(this.end.x, this.end.y);
+    canvas.content.closePath();
+    canvas.content.stroke();
   }
 }
