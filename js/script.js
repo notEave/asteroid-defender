@@ -140,23 +140,23 @@ const canvas = {
   },
 };
 
-const eventlib = {
+const hid = {
   mouse: {
     Click: function(event) {
     },
     Down: function(event) {
       if(event.button === 0) {
-        eventlib.mouse.down = true;
+        hid.mouse.down = true;
       }
     },
     Up: function(event) {
       if(event.button === 0) {
-        eventlib.mouse.down = false;
+        hid.mouse.down = false;
       }
     },
     Move: function(event) {
-      eventlib.mouse.position.x = event.clientX;
-      eventlib.mouse.position.y = event.clientY;
+      hid.mouse.x = event.clientX;
+      hid.mouse.y = event.clientY;
     },
     position: {x: null, y: null },
     down: false,
@@ -214,11 +214,11 @@ const time = {
 };
 
 function Start() {
-  document.addEventListener('keydown', eventlib.keyboard.KeyDown, false);
-  document.addEventListener('click', eventlib.mouse.Click, false);
-  document.addEventListener('mousedown', eventlib.mouse.Down, false);
-  document.addEventListener('mouseup', eventlib.mouse.Up, false);
-  document.addEventListener('mousemove', eventlib.mouse.Move, false);
+  document.addEventListener('keydown', hid.keyboard.KeyDown, false);
+  document.addEventListener('click', hid.mouse.Click, false);
+  document.addEventListener('mousedown', hid.mouse.Down, false);
+  document.addEventListener('mouseup', hid.mouse.Up, false);
+  document.addEventListener('mousemove', hid.mouse.Move, false);
   canvas.Maximize();
 }
 

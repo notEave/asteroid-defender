@@ -1,12 +1,11 @@
 // jshint esversion:6, -W138
 
-
 class Game {
   constructor() {
     Game.Initialize();
     this.queue = [
       new Scene(),
-      new PlayerHandler(),
+      new TurretHandler(),
       new AsteroidSpawner(),
       new TextElement(),
       new DeathScreen(),
@@ -37,10 +36,10 @@ class Game {
     Game.ground = page.height - 100;
     Game.weapons = Math.ceil(page.width / 500);
     Game.difficulty = 70;
-    Game.cooldown = 500;
+    Game.cooldown = 1;
     Game.bulletVel = 400;
     Game.bulletArray = [];
-    Game.lives = 3;// Number.MAX_SAFE_INTEGER;
+    Game.lives = Number.MAX_SAFE_INTEGER;// Number.MAX_SAFE_INTEGER;
     Game.score = 0;
   }
 }
@@ -59,98 +58,149 @@ class TextElement {
   }
 }
 
-class PlayerHandler {
-  constructor() {
-    this.turrets = this.InitializeWeapons();
-  }
-  InitializeWeapons() {
-    let turretArray = [];
-    for(var n = 0; n < Game.weapons; n++) {
-      turretArray[n] = new Turret(n, page.width / Game.weapons);
-    }
-    return turretArray;
-  }
-  Physics() {
-    for(var n = 0; n < this.turrets.length; n++) {
-      this.turrets[n].Physics();
-      this.turrets[n].Events();
-      Game.bulletArray[n] = this.turrets[n].turretHandler.bulletArray;
-    }
-  }
-  Draw() {
-    for(var n = 0; n < this.turrets.length; n++) {
-      this.turrets[n].Draw();
-    }
-  }
-}
-
-class Turret {
-  constructor(batteryIndex, sectorSize) {
-    this.position = {x: this.InitPositionX(batteryIndex, sectorSize), y: Game.ground};
-    this.laser = new Laser(this.position);
-    this.turretHandler = new TurretHandler(this.position);
-  }
-  InitPositionX(batteryIndex, sectorSize) {
-    return MathC.RandomRange(sectorSize * batteryIndex, sectorSize + sectorSize * batteryIndex);
-  }
-  Physics() {
-    this.laser.Physics();
-    this.turretHandler.Physics();
-  }
-  Events() {
-    this.turretHandler.Events();
-  }
-  Draw() {
-    this.laser.Draw();
-    this.turretHandler.Draw();
-    new Circle(this.position.x, this.position.y, [34, 51, 68, 100], 10, MathC.TAU, Math.PI).Draw();
-  }
-}
-
 class TurretHandler {
-  constructor(position) {
-    this.origin = position;
-    this.cooldown = MathC.RandomRange(Game.cooldown - Game.cooldown / 10, Game.cooldown + Game.cooldown / 10);
-    this.angle = Math.atan2(eventlib.mouse.position.y - this.origin.y, eventlib.mouse.position.x - this.origin.x);
-    this.state = {cooldown: false, lastFired: 0};
-    this.bulletArray = [];
+  constructor() {
+    this.turretArray = [];
+    this.Start();
+  }
+  Start() {
+    for(var n = 0; n < Game.weapons; n++) {
+      this.turretArray[n] = new TurretManager(n, page.width / Game.weapons);
+    }
   }
   Physics() {
-    this.angle = Math.atan2(eventlib.mouse.position.y - this.origin.y, eventlib.mouse.position.x - this.origin.x);
+    for(var n = 0; n < this.turretArray.length; n++) {
+      this.turretArray[n].Physics();
+      this.turretArray[n].Events();
+      Game.bulletArray[n] = this.turretArray[n].bulletArray;
+    }
+  }
+  Draw() {
+    for(var n = 0; n < this.turretArray.length; n++) {
+      this.turretArray[n].Draw();
+    }
+  }
+}
+
+class TurretManager {
+  constructor(arrayIndex, turretRegion) {
+    this.position = {x: TurretManager.InitX(arrayIndex, turretRegion), y: Game.ground};
+    this.Start(arrayIndex, turretRegion);
+  }
+  Start(arrayIndex, sectorSize) {
+    this.color = {r: MathC.RandomRange(0, 70), g: MathC.RandomRange(0, 70), b: MathC.RandomRange(0, 70), a: 100};
+    this.bulletSpeed = Game.bulletVel;
+    this.cooldownTime = MathC.RandomRange(Game.cooldown - Game.cooldown / 10, Game.cooldown + Game.cooldown / 10);
+    this.cooldownState = false;
+    this.lastFired = time.frame.physics.start;
+    this.anglePointer = {angle: TurretManager.SetAngle(this.position.y, this.position.x)};
+    this.barrelLength = 25;
+    this.bulletArray = [];
+    this.turretBase = new TurretBase(this.position, this.color);
+    this.turretBarrel = new TurretBarrel(this.position, this.color, this.anglePointer, this.barrelLength);
+    this.turretLaser = new TurretLaser(this.position, this.anglePointer, this.barrelLength);
+  }
+  static InitX(arrayIndex, turretRegion) {
+  return MathC.RandomRange(turretRegion * arrayIndex, turretRegion + turretRegion * arrayIndex);
+  }
+  GetCooldownState() {
+    return time.frame.physics.start - this.lastFired < this.cooldownTime;
+  }
+  static SetAngle(turretY, turretX) {
+    var angle = Math.atan2(hid.mouse.y - turretY, hid.mouse.x - turretX);
+    if(angle < MathC.angle.Radians(-165) || angle > Math.PI / 2) {
+      return MathC.angle.Radians(-165);
+    } else if(angle > MathC.angle.Radians(-15)) {
+      return MathC.angle.Radians(-15);
+    } return angle;
+  }
+  Physics() {
+    this.anglePointer.angle = TurretManager.SetAngle(this.position.y, this.position.x);
     for(var n = 0; n < this.bulletArray.length; n++) {
       this.bulletArray[n].Physics();
-
       if(this.bulletArray[n].OutofBounds()) {
         this.bulletArray.splice(n, 1);
       }
     }
+    this.turretLaser.Physics();
+    this.turretBarrel.Physics();
   }
   Events() {
-    this.state.cooldown = this.GetCooldownState();
-    if(!this.state.cooldown && eventlib.mouse.down) {
-      this.state.lastFired = time.frame.physics.start;
-      this.bulletArray.push(new Bullet(this.origin.x, this.origin.y, this.angle));
+    this.cooldownState = this.GetCooldownState();
+    if(!this.cooldownState && hid.mouse.down) {
+      this.lastFired = time.frame.physics.start;
+      this.bulletArray.push(new TurretShot(this.position.x, this.position.y, this.anglePointer.angle, this.barrelLength));
     }
   }
   Draw() {
     for(var n = 0; n < this.bulletArray.length; n++) {
       this.bulletArray[n].Draw();
     }
-  }
-  GetCooldownState() {
-    return time.frame.physics.start - this.state.lastFired < this.cooldown;
+    this.turretBase.Draw();
+    this.turretLaser.Draw();
+    this.turretBarrel.Draw();
   }
 }
 
-class Bullet {
-  constructor(originx, originy, angle) {
-    this.position = {x: originx, y: originy};
-    this.velocity = {x: Game.bulletVel * Math.cos(angle), y: (Game.bulletVel * Math.sin(angle))};
+class TurretBase {
+  constructor(position, color) {
+    this.position = position;
+    this.color = color;
+  }
+  Draw() {
+    new Circle(this.position.x, this.position.y, [this.color.r, this.color.g, this.color.b, this.color.a], 15, MathC.TAU, Math.PI).Draw();
+  }
+}
+
+class TurretBarrel {
+  constructor(position, color, anglePointer, barrelLength) {
+    this.position = position;
+    this.color = color;
+    this.anglePointer = anglePointer;
+    this.barrelLength = barrelLength;
+    this.barrelWidth = 6;
+  }
+  Physics() {
+    this.barrelStart = {x: this.position.x + (this.barrelLength / 2) * Math.cos(this.anglePointer.angle), y: this.position.y + (this.barrelLength / 2) * Math.sin(this.anglePointer.angle)};
+    this.end = {x: this.position.x + this.barrelLength * Math.cos(this.anglePointer.angle), y: this.position.y + this.barrelLength * Math.sin(this.anglePointer.angle)};
+  }
+  Draw() {
+    new Line([this.barrelStart.x, this.barrelStart.y], [this.end.x, this.end.y], [this.color.r, this.color.g, this.color.b, this.color.a], this.barrelWidth).Draw();
+  }
+}
+
+class TurretLaser {
+  constructor(position, anglePointer, barrelLength) {
+    this.position = position;
+    this.anglePointer = anglePointer;
+    this.barrelLength = barrelLength;
+    this.color = !!MathC.RandomRange(0,1) ? [255, 0, 100, 20] : [0, 255, 100, 20];
+  }
+  Physics() {
+    this.laserStart = {x: this.position.x + this.barrelLength * Math.cos(this.anglePointer.angle), y: this.position.y + this.barrelLength * Math.sin(this.anglePointer.angle)};
+    this.end = {x: this.position.x + page.height * Math.cos(this.anglePointer.angle), y: this.position.y + page.height * Math.sin(this.anglePointer.angle)};
+  }
+  Draw() {
+    var line = new GradientLine([this.laserStart.x, this.laserStart.y], [this.end.x, this.end.y], this.color, 2);
+    line.colorStop[0] = 0.7;
+    line.Draw();
+  }
+}
+
+class TurretShot {
+  constructor(positionX, positionY, direction, barrelLength) {
+    this.direction = direction;
+    this.barrelLength = barrelLength;
+    this.position = {
+      x: positionX + this.barrelLength * Math.cos(this.direction),
+      y: positionY + this.barrelLength * Math.sin(this.direction)
+    };
+    this.velocity = {x: Game.bulletVel * Math.cos(this.direction), y: (Game.bulletVel * Math.sin(this.direction))};
     this.rgb = {r: MathC.RandomRange(50,100), g: MathC.RandomRange(150, 230), b: MathC.RandomRange(200, 255)};
   }
   Physics() {
-    this.position.y += this.velocity.y * (time.frame.delta / 1000);
     this.position.x += this.velocity.x * (time.frame.delta / 1000);
+    this.position.y += this.velocity.y * (time.frame.delta / 1000);
   }
   Draw() {
     new GradientCircle(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.g, 10] , 15, 5).Draw();
@@ -158,22 +208,6 @@ class Bullet {
   }
   OutofBounds() {
     return this.position.x > page.width || this.position.x < 0 || this.position.y < 0 || this.position.y > Game.ground;
-  }
-}
-
-class Laser {
-  constructor(position) {
-    this.origin = position;
-    this.color = !!MathC.RandomRange(0,1) ? [255, 0, 100, 20] : [0, 255, 100, 20];
-  }
-  Physics() {
-    this.angle = Math.atan2(eventlib.mouse.position.y - this.origin.y, eventlib.mouse.position.x - this.origin.x);
-    this.end = {x: this.origin.x + page.height * Math.cos(this.angle), y: this.origin.y + page.height * Math.sin(this.angle)};
-  }
-  Draw() {
-    var line = new GradientLine([this.origin.x, this.origin.y], [this.end.x, this.end.y], this.color, 2);
-    line.colorStop[0] = 0.7;
-    line.Draw();
   }
 }
 
@@ -217,7 +251,8 @@ class Asteroid {
       x: MathC.RandomRange(-30, 30),
       y: MathC.RandomRange(30, 150),
     };
-    this.rgb = {r: MathC.RandomRange(150, 255), g: MathC.RandomRange(25, 125), b: MathC.RandomRange(25, 50) };
+    this.rgb = !!MathC.RandomRange(0,1) ? {r: MathC.RandomRange(150, 255), g: MathC.RandomRange(25, 125), b: MathC.RandomRange(25, 50)}
+    : {r: MathC.RandomRange(25, 125), g: MathC.RandomRange(25, 50), b: MathC.RandomRange(150, 225)};
     this.asteroidTrail = [];
   }
   Physics() {
@@ -261,7 +296,6 @@ class AsteroidTrail {
     this.position = {x: positionx, y: positiony};
     this.rgba = {r: astColor[0], g: astColor[1], b: astColor[2], a: 100 / 4};
   }
-
   Physics() {
     this.rgba.a += -0.25;
   }
@@ -347,20 +381,10 @@ class DeathScreen {
     this.bottomed = false;
   }
   Physics() {
-    if(this.peaked) {
-      this.transparency--;
-    }
-    if(this.bottomed) {
-      this.transparency++;
-    }
-    if(this.transparency == 50) {
-      this.peaked = true;
-      this.bottomed = false;
-    }
-    if(this.transparency === 0) {
-      this.peaked = false;
-      this.bottomed = true;
-    }
+    this.transparency += this.peaked ? -1 : 0;
+    this.transparency += this.bottomed ? 1 : 0;
+    [this.peaked, this.bottomed] = this.transparency == 50 ? [true, false] : [this.peaked, this.bottomed];
+    [this.peaked, this.bottomed] = this.transparency === 0 ? [false, true] : [this.peaked, this.bottomed];
   }
   Draw() {
     if(Game.lives <= 0) {
