@@ -36,10 +36,10 @@ class Game {
     Game.ground = page.height - 100;
     Game.weapons = Math.ceil(page.width / 500);
     Game.difficulty = 70;
-    Game.cooldown = 1;
+    Game.cooldown = 500;
     Game.bulletVel = 400;
     Game.bulletArray = [];
-    Game.lives = Number.MAX_SAFE_INTEGER;// Number.MAX_SAFE_INTEGER;
+    Game.lives = 3;// Number.MAX_SAFE_INTEGER;
     Game.score = 0;
   }
 }

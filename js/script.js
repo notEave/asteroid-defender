@@ -158,7 +158,7 @@ const hid = {
       hid.mouse.x = event.clientX;
       hid.mouse.y = event.clientY;
     },
-    position: {x: null, y: null },
+    x: null, y: null,
     down: false,
   },
   keyboard: {
