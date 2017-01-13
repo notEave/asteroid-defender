@@ -36,10 +36,10 @@ class Game {
     Game.ground = page.height - 100;
     Game.weapons = Math.ceil(page.width / 500);
     Game.difficulty = 70;
-    Game.cooldown = 1;
-    Game.bulletVel = 400;
+    Game.cooldown = 500;
+    Game.bulletVel = 500;
     Game.bulletArray = [];
-    Game.lives = Number.MAX_SAFE_INTEGER;// Number.MAX_SAFE_INTEGER;
+    Game.lives = 3;// Number.MAX_SAFE_INTEGER;
     Game.score = 0;
   }
 }
@@ -53,7 +53,7 @@ class UILayer {
   }
   Draw() {
     new TextElement(`Lives: ${Game.lives}`, 10, 25).Draw();
-    new TextElement(`Score: ${this.scoreTracker.scoreOut}`, 10, 45).Draw();
+    new TextElement(`Score: ${this.scoreTracker.score}`, 10, 45).Draw();
   }
 }
 
@@ -63,27 +63,10 @@ class ScoreTracker {
     this.scoreOut = this.score;
   }
   Physics() {
-    if(this.score < Game.score * 10) { this.score ++; }
-    this.scoreOut = Math.round(this.score);
+    if(this.score < Game.score * 10) { this.score++; }
   }
 }
 
-class TextElement {
-  constructor(text, positionX, positionY, fillStyle = [240, 48, 48, 100], textAlign = 'left', fontSize = 20) {
-    this.text = text;
-    this.position = {x: positionX, y: positionY};
-    this.fillStyle = `rgba(${fillStyle[0]},${fillStyle[1]},${fillStyle[2]},${fillStyle[3]})`;
-    this.textAlign = textAlign;
-    this.fontSize = fontSize;
-    this.font = `${this.fontSize}px sans-serif`;
-  }
-  Draw() {
-    canvas.content.font = this.font;
-    canvas.content.fillStyle = this.fillStyle;
-    canvas.content.textAlign = this.textAlign;
-    canvas.content.fillText(this.text, this.position.x, this.position.y);
-  }
-}
 
 class TurretHandler {
   constructor() {
@@ -115,7 +98,7 @@ class TurretManager {
     this.Start(arrayIndex, turretRegion);
   }
   Start(arrayIndex, sectorSize) {
-    this.color = {r: MathC.RandomRange(0, 70), g: MathC.RandomRange(0, 70), b: MathC.RandomRange(0, 70), a: 100};
+    this.color = {r: MathC.RandomRange(20, 70), g: MathC.RandomRange(20, 70), b: MathC.RandomRange(20, 70), a: 100};
     this.bulletSpeed = Game.bulletVel;
     this.cooldownTime = MathC.RandomRange(Game.cooldown - Game.cooldown / 10, Game.cooldown + Game.cooldown / 10);
     this.cooldownState = false;
@@ -417,12 +400,8 @@ class DeathScreen {
     if(Game.lives <= 0) {
       canvas.content.fillStyle = '#000';
       canvas.content.fillRect(0, 0, page.width, page.height);
-      new TextElement('Dead', page.width / 2, page.height / 2, [255, 40, 40, this.transparency / 100]).Draw();
-      canvas.content.font = '100px sans-serif';
-      canvas.content.fillStyle = 'rgba(255, 40, 40,' + this.transparency / 100 + ')';
-      canvas.content.textAlign = 'center';
-      canvas.content.fillText('Dead', page.width / 2, page.height / 2);
-      canvas.content.fillText(`Score: ${(Game.finalScore * 10).toLocaleString()}`, page.width / 2, page.height * 0.8);
+      new TextElement('Dead', page.width / 2, page.height / 2, [255, 40, 40, this.transparency / 100], 'center', 100).Draw();
+      new TextElement(`Score: ${(Game.finalScore * 10).toLocaleString()}`, page.width / 2, page.height * 0.8, [255, 40, 40, this.transparency / 100], 'center', 100).Draw();
     }
   }
 }
@@ -494,5 +473,22 @@ class GradientLine extends Line {
     canvas.content.lineTo(this.end.x, this.end.y);
     canvas.content.closePath();
     canvas.content.stroke();
+  }
+}
+
+class TextElement {
+  constructor(text, positionX, positionY, fillStyle = [240, 48, 48, 100], textAlign = 'left', fontSize = 20) {
+    this.text = text;
+    this.position = {x: positionX, y: positionY};
+    this.fillStyle = `rgba(${fillStyle[0]},${fillStyle[1]},${fillStyle[2]},${fillStyle[3]})`;
+    this.textAlign = textAlign;
+    this.fontSize = fontSize;
+    this.font = `${this.fontSize}px sans-serif`;
+  }
+  Draw() {
+    canvas.content.font = this.font;
+    canvas.content.fillStyle = this.fillStyle;
+    canvas.content.textAlign = this.textAlign;
+    canvas.content.fillText(this.text, this.position.x, this.position.y);
   }
 }
