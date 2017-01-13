@@ -6,7 +6,7 @@ class Game {
     this.queue = [
       new Scene(),
       new TurretHandler(),
-      new AsteroidSpawner(),
+      new AsteroidHandler(),
       new UILayer(),
       new DeathScreen(),
     ];
@@ -39,7 +39,7 @@ class Game {
     Game.cooldown = 500;
     Game.bulletVel = 500;
     Game.bulletArray = [];
-    Game.lives = 3;// Number.MAX_SAFE_INTEGER;
+    Game.lives = 3; // Number.MAX_SAFE_INTEGER;
     Game.score = 0;
   }
 }
@@ -66,7 +66,6 @@ class ScoreTracker {
     if(this.score < Game.score * 10) { this.score++; }
   }
 }
-
 
 class TurretHandler {
   constructor() {
@@ -221,76 +220,103 @@ class TurretShot {
   }
 }
 
-class AsteroidSpawner {
+class AsteroidHandler {
   constructor() {
-    this.asteroids = [];
+    this.asteroidArray = [];
   }
   Physics() {
-    if(AsteroidSpawner.Chance(Game.difficulty)) {
-      this.asteroids.push(new Asteroid());
+    if(AsteroidHandler.TestChance(Game.difficulty)) {
+      this.asteroidArray.unshift(new AsteroidManager());
     }
-    for(let n = 0; n < this.asteroids.length; n++) {
-      this.asteroids[n].Physics();
-      if(this.asteroids[n].HitGround()) {
-        Game.lives--;
+    for(var i = 0; i < this.asteroidArray.length; i++) {
+      if(this.asteroidArray[i].pointer.deadFrames > 100) {
+        this.asteroidArray.splice(i, 1);
       }
-      var impacted = this.asteroids[n].CheckForImpacts();
-      if(impacted) { Game.score++; }
-      if(this.asteroids[n].OutOfBounds() || impacted) {
-        this.asteroids.splice(n, 1);
-      }
+    }
+    for(var n = 0; n < this.asteroidArray.length; n++) {
+      this.asteroidArray[n].Physics();
     }
   }
   Draw() {
-    for(let n = 0; n < this.asteroids.length; n++) {
-      this.asteroids[n].Draw();
+    for(var n = 0; n < this.asteroidArray.length; n++) {
+      this.asteroidArray[n].Draw();
     }
   }
-  static Chance(chance) {
+  static TestChance(chance) {
     return chance == MathC.RandomRange(1, chance);
   }
 }
 
-class Asteroid {
+class AsteroidManager {
   constructor() {
-    this.position = {
-      x: MathC.RandomRange(0, page.width),
-      y: 0,
+    this.position = {x: MathC.RandomRange(0, page.width), y: 0};
+    this.velocity = {x: MathC.RandomRange(-30, 30), y: MathC.RandomRange(30, 150)};
+    this.rgb = !!MathC.RandomRange(0, 1) ?
+    {r: MathC.RandomRange(150, 255), g: MathC.RandomRange(25, 125), b: MathC.RandomRange(25, 50)} :
+    {r: MathC.RandomRange(25, 125), g: MathC.RandomRange(25, 50), b: MathC.RandomRange(150, 225)};
+    this.pointer = {
+      alive: true,
+      aliveFrames: 0,
+      deadFrames: 0,
+      hitGround: false,
+      hitBullet: false,
+      outOfBounds: false,
+      killTime: undefined,
+      angle: AsteroidManager.SetAngle(this.position.x, this.position.y, this.velocity.x, this.velocity.y)
     };
-    this.velocity = {
-      x: MathC.RandomRange(-30, 30),
-      y: MathC.RandomRange(30, 150),
-    };
-    this.rgb = !!MathC.RandomRange(0,1) ? {r: MathC.RandomRange(150, 255), g: MathC.RandomRange(25, 125), b: MathC.RandomRange(25, 50)}
-    : {r: MathC.RandomRange(25, 125), g: MathC.RandomRange(25, 50), b: MathC.RandomRange(150, 225)};
-    this.asteroidTrail = [];
+    this.asteroidCore = new AsteroidCore(this.position, this.rgb, this.pointer);
+    this.asteroidTrail = new AsteroidTrail(this.position, this.rgb, this.pointer);
+    this.asteroidRemnantArray = new Array(MathC.RandomRange(2, 5));
   }
   Physics() {
-    this.position.x += this.velocity.x * (time.frame.delta / 1000);
-    this.position.y += this.velocity.y * (time.frame.delta / 1000);
-    if(time.frame.current % 10 === 0) {
-      this.asteroidTrail.unshift(new AsteroidTrail(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b]));
+    this.pointer.aliveFrames++;
+    if(!this.pointer.alive) {
+      this.pointer.deadFrames++;
     }
-    if(this.asteroidTrail.length > 10) {
-      this.asteroidTrail.splice(10, 1);
+    if(!this.hitGround) {
+      this.position.x += this.velocity.x * (time.frame.delta / 1000);
+      this.position.y += this.velocity.y * (time.frame.delta / 1000);
+      this.pointer.angle = AsteroidManager.SetAngle(this.position.x, this.position.y, this.velocity.x, this.velocity.y);
+      if(this.IsKilled() && this.pointer.alive) {
+        this.pointer.alive = false;
+        this.pointer.hitGround = this.HitGround();
+        Game.lives += this.pointer.hitGround ? -1 : 0;
+        this.pointer.hitBullet = this.IsHit();
+        Game.score += this.pointer.hitBullet ? 1 : 0;
+        this.pointer.outOfBounds = this.IsOutOfBounds();
+        this.pointer.killTime = time.frame.physics.start;
+        this.PopulateRemnantArray();
+      }
     }
-    for(var n = 0; n < this.asteroidTrail.length; n++) {
-      this.asteroidTrail[n].Physics();
+    if(!this.pointer.alive && !this.pointer.outOfBounds) {
+      for(var n = 0; n < this.asteroidRemnantArray.length; n++) {
+        this.asteroidRemnantArray[n].Physics();
+      }
     }
+    this.asteroidTrail.Physics();
   }
   Draw() {
-    for(var n = 0; n < this.asteroidTrail.length; n++) {
-      this.asteroidTrail[n].Draw();
+    this.asteroidCore.Draw();
+    this.asteroidTrail.Draw();
+    if(!this.pointer.alive) {
+      for(var n = 0; n < this.asteroidRemnantArray.length; n++) {
+        this.asteroidRemnantArray[n].Draw();
+      }
     }
-    new GradientCircle(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b, 100], 10, 5).Draw();
   }
-  OutOfBounds() {
-    return this.position.x > page.width || this.position.x < 0 || this.position.y > Game.ground;
+  static SetAngle(positionX, positionY, velocityX, velocityY) {
+    return Math.atan2((positionX + velocityX) - positionX, (positionY + velocityY) - positionY);
+  }
+  IsKilled() {
+    return this.IsOutOfBounds() || this.HitGround() || this.IsHit();
+  }
+  IsOutOfBounds() {
+    return this.position.x < 0 || this.position.x > page.width;
   }
   HitGround() {
-    return this.position.y > Game.ground;
+    return this.position.y >= Game.ground;
   }
-  CheckForImpacts() {
+  IsHit() {
     for(var n = 0; n < Game.bulletArray.length; n++) {
       for(var i = 0; i < Game.bulletArray[n].length; i++) {
         if (Math.pow(this.position.x-Game.bulletArray[n][i].position.x, 2) + Math.pow(Game.bulletArray[n][i].position.y-this.position.y, 2) <= Math.pow(10+5, 2)) {
@@ -299,18 +325,87 @@ class Asteroid {
       }
     }
   }
+  PopulateRemnantArray() {
+    for(var n = 0; n < this.asteroidRemnantArray.length; n++) {
+      this.asteroidRemnantArray[n] = new AsteroidRemnant(this.position.x, this.position.y, this.velocity.x, this.velocity.y, [this.rgb.r, this.rgb.g, this.rgb.b], this.pointer);
+    }
+  }
+}
+
+class AsteroidCore {
+  constructor(positionPointer, rgbPointer, pointer) {
+    this.position = positionPointer;
+    this.rgb = rgbPointer;
+    this.pointer = pointer;
+    this.radius = 10;
+    this.gradientStart = 5;
+  }
+  Draw() {
+    if(this.pointer.alive && !this.pointer.hitGround) {
+      new GradientCircle(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b, 100], this.radius, this.gradientStart).Draw();
+    }
+  }
 }
 
 class AsteroidTrail {
-  constructor(positionx, positiony, astColor) {
-    this.position = {x: positionx, y: positiony};
-    this.rgba = {r: astColor[0], g: astColor[1], b: astColor[2], a: 100 / 4};
+  constructor(positionPointer, rgbPointer, pointer) {
+    this.position = positionPointer;
+    this.rgb = rgbPointer;
+    this.pointer = pointer;
+    this.maxParticles = 10;
+    this.particleArray = [];
+  }
+  Physics() {
+    if(this.pointer.alive && this.pointer.aliveFrames % 10 === 0) {
+      this.particleArray.unshift(new AsteroidTrailParticle(this.position.x, this.position.y, [this.rgb.r, this.rgb.g, this.rgb.b]));
+    }
+    if(this.particleArray.length > this.maxParticles) {
+      this.particleArray.splice(this.maxParticles, 1);
+    }
+    for(var n = 0; n < this.particleArray.length; n++) {
+      this.particleArray[n].Physics();
+    }
+  }
+  Draw() {
+    for(var n = 0; n < this.particleArray.length; n++) {
+      this.particleArray[n].Draw();
+    }
+  }
+}
+
+class AsteroidTrailParticle {
+  constructor(positionX, positionY, color) {
+    this.position = {x: positionX, y: positionY};
+    this.rgba = {r: color[0],g: color[1], b: color[2], a: 25};
+    this.radius = 25;
+    this.gradientStart = 5;
   }
   Physics() {
     this.rgba.a += -0.25;
   }
   Draw() {
-    new GradientCircle(this.position.x, this.position.y, [this.rgba.r, this.rgba.g, this.rgba.b, this.rgba.a], 25, 5).Draw();
+    new GradientCircle(this.position.x, this.position.y, [this.rgba.r, this.rgba.g, this.rgba.b, this.rgba.a], this.radius, this.gradientStart).Draw();
+  }
+}
+
+class AsteroidRemnant {
+  constructor(positionX, positionY, velocityX, velocityY, color, pointer) {
+    this.position = {x: positionX, y: positionY};
+    this.velocity = {x: velocityX + MathC.RandomRange(-60, 60), y: velocityY + MathC.RandomRange(-60, 60)};
+    this.rgba = {r: color[0], g: color[1], b: color[2], a: 100};
+    this.radius = 8;
+    this.gradientStart = 3;
+    this.pointer = pointer;
+  }
+  Physics() {
+    this.rgba.a += -1;
+    this.position.x += this.velocity.x * (time.frame.delta / 1000);
+    this.position.y += this.velocity.y * (time.frame.delta / 1000);
+  }
+  Draw() {
+    if(!this.pointer.outOfBounds) {
+      new GradientCircle(this.position.x, this.position.y, [this.rgba.r, this.rgba.g, this.rgba.b, this.rgba.a], this.radius, this.gradientStart).Draw();
+    }
   }
 }
 
