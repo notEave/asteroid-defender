@@ -7,7 +7,7 @@ class Game {
       new Scene(),
       new TurretHandler(),
       new AsteroidSpawner(),
-      new TextElement(),
+      new UILayer(),
       new DeathScreen(),
     ];
   }
@@ -36,25 +36,52 @@ class Game {
     Game.ground = page.height - 100;
     Game.weapons = Math.ceil(page.width / 500);
     Game.difficulty = 70;
-    Game.cooldown = 500;
+    Game.cooldown = 1;
     Game.bulletVel = 400;
     Game.bulletArray = [];
-    Game.lives = 3;// Number.MAX_SAFE_INTEGER;
+    Game.lives = Number.MAX_SAFE_INTEGER;// Number.MAX_SAFE_INTEGER;
     Game.score = 0;
   }
 }
 
-class TextElement {
+class UILayer {
   constructor() {
+    this.scoreTracker = new ScoreTracker();
   }
   Physics() {
-
+    this.scoreTracker.Physics();
   }
   Draw() {
-    canvas.content.font = '20px sans-serif';
-    canvas.content.fillStyle = '#f33';
-    canvas.content.textAlign = 'center';
-    canvas.content.fillText(`Lives: ${Game.lives}`, 50, 25);
+    new TextElement(`Lives: ${Game.lives}`, 10, 25).Draw();
+    new TextElement(`Score: ${this.scoreTracker.scoreOut}`, 10, 45).Draw();
+  }
+}
+
+class ScoreTracker {
+  constructor() {
+    this.score = Game.score;
+    this.scoreOut = this.score;
+  }
+  Physics() {
+    if(this.score < Game.score * 10) { this.score ++; }
+    this.scoreOut = Math.round(this.score);
+  }
+}
+
+class TextElement {
+  constructor(text, positionX, positionY, fillStyle = [240, 48, 48, 100], textAlign = 'left', fontSize = 20) {
+    this.text = text;
+    this.position = {x: positionX, y: positionY};
+    this.fillStyle = `rgba(${fillStyle[0]},${fillStyle[1]},${fillStyle[2]},${fillStyle[3]})`;
+    this.textAlign = textAlign;
+    this.fontSize = fontSize;
+    this.font = `${this.fontSize}px sans-serif`;
+  }
+  Draw() {
+    canvas.content.font = this.font;
+    canvas.content.fillStyle = this.fillStyle;
+    canvas.content.textAlign = this.textAlign;
+    canvas.content.fillText(this.text, this.position.x, this.position.y);
   }
 }
 
@@ -126,8 +153,7 @@ class TurretManager {
     this.turretBarrel.Physics();
   }
   Events() {
-    this.cooldownState = this.GetCooldownState();
-    if(!this.cooldownState && hid.mouse.down) {
+    if(!this.GetCooldownState() && hid.mouse.down) {
       this.lastFired = time.frame.physics.start;
       this.bulletArray.push(new TurretShot(this.position.x, this.position.y, this.anglePointer.angle, this.barrelLength));
     }
@@ -158,6 +184,7 @@ class TurretBarrel {
     this.color = color;
     this.anglePointer = anglePointer;
     this.barrelLength = barrelLength;
+    this.barrelStart = Math.round(this.barrelLength / 2);
     this.barrelWidth = 6;
   }
   Physics() {
@@ -390,6 +417,7 @@ class DeathScreen {
     if(Game.lives <= 0) {
       canvas.content.fillStyle = '#000';
       canvas.content.fillRect(0, 0, page.width, page.height);
+      new TextElement('Dead', page.width / 2, page.height / 2, [255, 40, 40, this.transparency / 100]).Draw();
       canvas.content.font = '100px sans-serif';
       canvas.content.fillStyle = 'rgba(255, 40, 40,' + this.transparency / 100 + ')';
       canvas.content.textAlign = 'center';
