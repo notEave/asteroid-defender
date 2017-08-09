@@ -1,0 +1,24 @@
+{
+  "name": "asteroid-defender",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/notEave/asteroid-defender.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/notEave/asteroid-defender/issues"
+  },
+  "homepage": "https://github.com/notEave/asteroid-defender#readme",
+  "devDependencies": {
+    "browserify": "^14.4.0",
+    "typescript": "^2.4.2"
+  }
+}
