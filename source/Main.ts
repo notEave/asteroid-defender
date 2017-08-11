@@ -1,6 +1,7 @@
+import { LogicObject } from './LogicObject';
+
 class Main {
   public static main():void {
-    console.log('hello');
   }
 }
 
