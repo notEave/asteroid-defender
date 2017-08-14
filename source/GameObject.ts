@@ -9,13 +9,11 @@ export class GameObject {
     this.components = new ArrayList<Component>();
   }
 
-  public addComponent(component:Component):void {
+  public addComponent<T extends Component>(component:T):void {
     this.components.put(component);
   }
 
   public getComponent<T extends Component>():T {
-    this.components.forEach(v => {
-      if(v instanceof T)
-    })
+    return this.components.peek(0) as T;
   }
 }

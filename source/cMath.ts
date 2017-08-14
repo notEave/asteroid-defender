@@ -4,8 +4,8 @@ import { double, int } from './Cast';
  * Stateless math class
  */
 export class cMath {
-  public static inRange(v:number, min:number, max:number):boolean {
-    return min <= v && v <= max;
+  public static inRange(min:number, value:number, max:number):boolean {
+    return min <= value && value <= max;
   }
 
   public static average(numbers:Array<number>):number {
@@ -47,8 +47,17 @@ export class cMath {
     return Math.ceil(double(value) * valueMultiplier) / valueMultiplier;
   }
 
-  public static distance(x1:number, y1:number, x2:number, y2:number):number {
-    return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
+  public static len(x:number, y:number):number {
+    return Math.sqrt(x * x + y * y);
+  }
+
+  public static normal(x:number, y:number):Array<number> {
+    const LENGTH:number = cMath.len(x, y);
+    return [double(x / LENGTH), double(y / LENGTH)];
+  }
+
+  public static dot(x1:number, y1:number, x2:number, y2:number):number {
+    return x1 * x2 + y1 * y2;
   }
 }
 
@@ -72,6 +81,14 @@ export function ceil(value:number, precision:number):number {
   return cMath.ceil(value, precision);
 }
 
-export function distance(x1:number, y1:number, x2:number, y2:number):number {
-  return cMath.distance(x1, y1, x2, y2);
+export function len(x:number, y:number):number {
+  return cMath.len(x, y);
+}
+
+export function normal(x:number, y:number):Array<number> {
+  return cMath.normal(x, y);
+}
+
+export function dot(x1:number, y1:number, x2:number, y2:number):number {
+  return cMath.dot(x1, y1, x2, y2);
 }

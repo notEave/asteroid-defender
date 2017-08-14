@@ -3,7 +3,7 @@
         "module": "commonjs",
         "target": "es6",
         "outDir": "./bin",
-        "newLine": "lf",
+        "newLine": "LF",
         "charset": "utf8",
         "removeComments": true,
 
@@ -13,5 +13,13 @@
         "alwaysStrict": true,
         "allowJs": false,
         "sourceMap": false
-    }
+    },
+
+    "include": [
+        "source/**/*"
+    ],
+
+    "exclude": [
+        "**/*.test.ts"
+    ]
 }
