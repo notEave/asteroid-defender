@@ -1,15 +1,21 @@
-import { LogicObject } from './LogicObject';
-import { GameObject } from './GameObject';
-import { cMath } from './cMath';
-import { len } from './cMath';
-import { Transform } from './Transform';
-import { scope } from './Enumerate';
+import { Vector } from './Vector';
+
+class XD {
+  private readonly x:number;
+  constructor() {
+    this.x = 4;
+  }
+}
 
 class Main {
   public static main():void {
-    scope(0, 100, i => {
-      console.log('xd');
-    });
+    const xd:XD = new XD;
+    console.log(Object.getPrototypeOf(xd).constructor.name);
+    console.log(XD.prototype === Object.getPrototypeOf(xd));
+  }
+
+  public static test<T extends Object>():void {
+
   }
 }
 

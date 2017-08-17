@@ -46,19 +46,6 @@ export class cMath {
 
     return Math.ceil(double(value) * valueMultiplier) / valueMultiplier;
   }
-
-  public static len(x:number, y:number):number {
-    return Math.sqrt(x * x + y * y);
-  }
-
-  public static normal(x:number, y:number):Array<number> {
-    const LENGTH:number = cMath.len(x, y);
-    return [double(x / LENGTH), double(y / LENGTH)];
-  }
-
-  public static dot(x1:number, y1:number, x2:number, y2:number):number {
-    return x1 * x2 + y1 * y2;
-  }
 }
 
 export function inRange(value:number, min:number, max:number):boolean {
@@ -79,16 +66,4 @@ export function floor(value:number, precision:number):number {
 
 export function ceil(value:number, precision:number):number {
   return cMath.ceil(value, precision);
-}
-
-export function len(x:number, y:number):number {
-  return cMath.len(x, y);
-}
-
-export function normal(x:number, y:number):Array<number> {
-  return cMath.normal(x, y);
-}
-
-export function dot(x1:number, y1:number, x2:number, y2:number):number {
-  return cMath.dot(x1, y1, x2, y2);
 }
