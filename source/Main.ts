@@ -15,7 +15,8 @@ class Main {
   }
 
   public static test<T extends Object>():void {
-
+    
+    console.log(T as Object);
   }
 }
 
